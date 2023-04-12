@@ -43,7 +43,13 @@ module.exports = function (args, opts) {
 
 	var aliases = {};
 
-	function aliasIsBoolean(key) {
+	function isBooleanKey(key) {
+		if (flags.bools[key]) {
+			return true;
+		}
+		if (!aliases[key]) {
+			return false;
+		}
 		return aliases[key].some(function (x) {
 			return flags.bools[x];
 		});
@@ -129,10 +135,14 @@ module.exports = function (args, opts) {
 		});
 	}
 
+	// Set booleans to false by default.
 	Object.keys(flags.bools).forEach(function (key) {
-		setArg(key, defaults[key] === undefined ? false : defaults[key]);
+		setArg(key, false);
 	});
-
+	// Set booleans to user defined default if supplied.
+	Object.keys(defaults).filter(isBooleanKey).forEach(function (key) {
+		setArg(key, defaults[key]);
+	});
 	var notFlags = [];
 
 	if (args.indexOf('--') !== -1) {
@@ -152,7 +162,7 @@ module.exports = function (args, opts) {
 			var m = arg.match(/^--([^=]+)=([\s\S]*)$/);
 			key = m[1];
 			var value = m[2];
-			if (flags.bools[key]) {
+			if (isBooleanKey(key)) {
 				value = value !== 'false';
 			}
 			setArg(key, value, arg);
@@ -165,9 +175,8 @@ module.exports = function (args, opts) {
 			if (
 				next !== undefined
 				&& !(/^(-|--)[^-]/).test(next)
-				&& !flags.bools[key]
+				&& !isBooleanKey(key)
 				&& !flags.allBools
-				&& (aliases[key] ? !aliasIsBoolean(key) : true)
 			) {
 				setArg(key, next, arg);
 				i += 1;
@@ -218,8 +227,7 @@ module.exports = function (args, opts) {
 				if (
 					args[i + 1]
 					&& !(/^(-|--)[^-]/).test(args[i + 1])
-					&& !flags.bools[key]
-					&& (aliases[key] ? !aliasIsBoolean(key) : true)
+					&& !isBooleanKey(key)
 				) {
 					setArg(key, args[i + 1], arg);
 					i += 1;
